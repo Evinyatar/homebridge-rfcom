@@ -1,0 +1,18 @@
+{
+  "bridge": {
+    "name": "HomebridgePI",
+    "username": "CD:23:3D:B3:CE:30",
+    "port": 51826,
+    "pin": "031-11-111"
+  },
+  "description": "433 Demo",
+  "platforms": [
+    {
+      "platform": "RfComPlatform",
+      "name": "RfCom",
+      "port": "/dev/ttyACM0"
+    }
+  ],
+  "accessories": [
+  ]
+}
