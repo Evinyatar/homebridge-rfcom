@@ -59,7 +59,9 @@ class RfCom {
     }
 
     _sendNext() {
-        this.port.write(this.queue[0].cmd + "\n", (err) => {
+        var next = this.queue[0].cmd;
+        console.log("Writing next command " + next);
+        this.port.write(next + "\n", (err) => {
             if(err) {
                 console.log(err);
             }
@@ -69,6 +71,7 @@ class RfCom {
 
     _handle(line) {
         let cmd = this.queue.shift();
+        console.log("Received " + line + " in response to " + cmd.cmd);
         if(this.queue.length == 0) {
             this.hold = false;
         } else {

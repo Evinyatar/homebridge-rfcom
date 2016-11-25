@@ -19,118 +19,7 @@ module.exports = function (homebridge) {
     Characteristic = homebridge.hap.Characteristic;
     UUIDGen = homebridge.hap.uuid;
 
-    class ChaconDioHandler {
-        constructor(device) {
-            this.device = device;
-        }
-
-        get displayName() {
-            return "Chacon DIO - " + this.device.id;
-        }
-
-        initAccessory(accessory) {
-            accessory.addService(Service.Switch);
-        }
-
-        attach(accessory) {
-            accessory.getService(Service.Switch).getCharacteristic(Characteristic.On).on("set", (value, callback) => {
-                rfComDevice.send(this.device.id, value ? "on" : "off");
-                callback();
-            });
-        }
-    }
-
-    class SomfyHandler {
-        constructor(device) {
-            this.device = device;
-        }
-
-        get displayName() {
-            return "Chacon DIO - " + this.device.id;
-        }
-
-        initAccessory(accessory) {
-            accessory.addService(Service.WindowCovering);
-        }
-
-        attach(accessory) {
-            const orientation = {
-                closed: 'down',
-                middle: 'stop',
-                opened: 'up'
-            };
-
-            const service = accessory.getService(Service.WindowCovering);
-
-            const currentPosition =
-                service.getCharacteristic(Characteristic.CurrentPosition);
-            const positionState =
-                service.getCharacteristic(Characteristic.PositionState);
-            const targetPosition =
-                service.getCharacteristic(Characteristic.TargetPosition);
-
-            targetPosition.on('set', (targetValue, callback) => {
-                const logError = error => {
-                    this.log(
-                        'Encountered an error setting target position of %s: %s',
-                        `channel ${channelNumber} (${name})`,
-                        error.message
-                    );
-                };
-
-                currentPosition.getValue((error, currentValue) => {
-                    if (error) {
-                        logError(error);
-                        callback(error);
-                        return;
-                    }
-
-                    console.log(
-                        'Setting target position of %s from %s to %s.',
-                        `${currentValue}%`,
-                        `${targetValue}%`
-                    );
-                    positionState.setValue(
-                        targetValue < currentValue
-                            ? Characteristic.PositionState.DECREASING
-                            : targetValue > currentValue
-                            ? Characteristic.PositionState.INCREASING
-                            : Characteristic.PositionState.STOPPED
-                    );
-                    callback();
-
-                    const cmd =
-                        targetValue === 0
-                            ? orientation.closed
-                            : targetValue === 100
-                            ? orientation.opened
-                            : orientation.middle;
-
-                    console.log("Sending", cmd);
-                    let promise = rfComDevice.send(this.device.id, cmd);
-                    // let promise = Promise.resolve();
-
-                    promise.then(
-                        () => {
-                            currentPosition.setValue(targetValue);
-                            positionState.setValue(Characteristic.PositionState.STOPPED);
-                        },
-                        logError
-                    );
-                });
-            });
-
-            // Set a more sane default value for the current position.
-            currentPosition.setValue(currentPosition.getDefaultValue());
-
-            return service;
-        }
-    }
-
-    var handlers = {
-        "Chacon Dio": ChaconDioHandler,
-        "Somfy": SomfyHandler
-    };
+    var handlers = require('./protocols');
 
     // Platform constructor
     // config may be null
@@ -154,13 +43,15 @@ module.exports = function (homebridge) {
                     platform.log("DidFinishLaunching");
 
                     rfComDevice = new RfCom(config.port);
+                    this.rfComDevice = rfComDevice;
+
                     rfComDevice.open().then(() => {
                         rfComDevice.listDevices().then(deviceList => {
                             deviceList.forEach(device => {
                                 console.log("Device detected", device);
                                 if(!(device.id in this.accessories)) {
                                     if(device.protocol in handlers) {
-                                        var handler = new handlers[device.protocol](device);
+                                        var handler = new handlers[device.protocol](this, device, config.extra_config[device.id]);
                                         let uuid = UUIDGen.generate(handler.displayName);
 
                                         let acc = new PlatformAccessory(handler.displayName, uuid);
@@ -188,7 +79,7 @@ module.exports = function (homebridge) {
             this.log(accessory.displayName, "Configure Accessory");
             let device = accessory.context.device;
             let classId = device.protocol;
-            let handler = new handlers[classId](accessory.context.device);
+            let handler = new handlers[classId](this, accessory.context.device, this.config.extra_config[device.id]);
             handler.attach(accessory);
             this.accessories[device.id] = handler;
             accessory.updateReachability(true);

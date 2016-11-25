@@ -10,7 +10,13 @@
     {
       "platform": "RfComPlatform",
       "name": "RfCom",
-      "port": "/dev/ttyACM0"
+      "port": "/dev/ttyACM0",
+      "extra_config": {
+        "1": {
+          "timeUpToDown": 52.15,
+          "timeDownToUp": 58.65
+        }
+      }
     }
   ],
   "accessories": [
