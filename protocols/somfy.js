@@ -27,7 +27,7 @@ class SomfyHandler extends AbstractHandler {
     }
 
     initAccessory(accessory) {
-        accessory.addService(Service.WindowCovering);
+        accessory.addService(this.Service.WindowCovering);
     }
 
     setPositionState(state) {
