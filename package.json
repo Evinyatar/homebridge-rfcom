@@ -1,6 +1,6 @@
 {
   "name": "homebridge-rfcom",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "RFCom control for homebridge, with Somfy and Chacon DIO support.",
   "main": "index.js",
   "keywords": [

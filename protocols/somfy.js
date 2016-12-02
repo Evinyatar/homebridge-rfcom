@@ -18,12 +18,12 @@ class SomfyHandler extends AbstractHandler {
 
         // assume covering is fully open and stopped at startup
         this.state = 0;
-        this.lastPosition = 100;
+        this.lastPosition = this.targetActualPosition = 100;
         this.advancedControl = extraConfig !== undefined && extraConfig.timeUpToDown !== undefined && extraConfig.timeDownToUp !== undefined;
     }
 
     get displayName() {
-        return "Chacon DIO - " + this.device.id;
+        return "Somfy - " + this.device.id;
     }
 
     initAccessory(accessory) {
@@ -31,7 +31,8 @@ class SomfyHandler extends AbstractHandler {
     }
 
     setPositionState(state) {
-        this.accessory.getService(this.Service.WindowCovering).getCharacteristic(this.Characteristic.PositionState).setValue(state);
+        console.log("Updating position state", state);
+        this.accessory.getService(this.Service.WindowCovering).getCharacteristic(this.Characteristic.PositionState).updateValue(state);
     }
 
     moveUp() {
@@ -43,7 +44,7 @@ class SomfyHandler extends AbstractHandler {
         console.log("Move Up");
         this.send("up");
         this.setPositionState(this.Characteristic.PositionState.INCREASING);
-        this.timestamp = getTime()
+        this.timestamp = getTime();
         this.positionAtMotionStart = this.currentActualPosition;
         this.state = 1;
     }
@@ -57,18 +58,19 @@ class SomfyHandler extends AbstractHandler {
         console.log("Move Down");
         this.send("down");
         this.setPositionState(this.Characteristic.PositionState.DECREASING);
-        this.timestamp = getTime()
+        this.timestamp = getTime();
         this.positionAtMotionStart = this.currentActualPosition;
         this.state = -1;
     }
 
-    stop(assumeStopped) {
+    stop(assumeStopped, value) {
         if(this.state == 0) {
             // going to preferred halfway
         } else {
             this.setPositionState(this.Characteristic.PositionState.STOPPED);
-            this.accessory.getService(this.Service.WindowCovering).getCharacteristic(this.Characteristic.CurrentPosition).setValue(this.currentActualPosition);
-            this.lastPosition = this.currentActualPosition;
+            var currentPosition = (value === undefined ? this.currentActualPosition : value);
+            this.accessory.getService(this.Service.WindowCovering).getCharacteristic(this.Characteristic.CurrentPosition).updateValue(Math.round(currentPosition));
+            this.lastPosition = currentPosition;
             this.state = 0;
             if(!assumeStopped) {
                 console.log("Stopped at " + this.lastPosition);
@@ -86,6 +88,8 @@ class SomfyHandler extends AbstractHandler {
             console.log("Target position already at " + value);
             return;
         }
+
+        this.targetActualPosition = value;
 
         console.log("Setting to " + value + " from " + current);
 
@@ -140,7 +144,7 @@ class SomfyHandler extends AbstractHandler {
             targetPosition.on('set', (targetValue, callback) => {
                 try {
                     this.goToActualPosition(targetValue);
-                    callback();
+                    callback(null);
                 } catch(error) {
                     console.log("Error setting position " + error);
                     callback(error);
@@ -148,16 +152,16 @@ class SomfyHandler extends AbstractHandler {
             });
 
             targetPosition.on('get', (callback) => {
-                callback(null, this.targetActualPosition);
+                var position = this.targetActualPosition;
+                console.log("Querying target position", position);
+                callback(null, position);
             });
 
             currentPosition.on('get', (callback) => {
-                callback(null, this.currentActualPosition);
+                var position = this.currentActualPosition;
+                console.log("Querying current position", Math.round(position));
+                callback(null, position);
             });
-
-            currentPosition.setValue(this.currentActualPosition);
-            targetPosition.setValue(this.currentActualPosition);
-            positionState.setValue(this.Characteristic.PositionState.STOPPED);
 
             positionState.on('get', (callback) => {
                 if (this.state == 0) {
@@ -185,7 +189,7 @@ class SomfyHandler extends AbstractHandler {
                         positionState.setValue(this.Characteristic.PositionState.STOPPED);
                     }
 
-                    callback();
+                    callback(null);
 
                     let promise;
                     if(targetValue == 100) {
