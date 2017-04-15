@@ -14,7 +14,8 @@ class RfCom {
         return new Promise((resolve, reject) => {
             var self = this;
             var port = new SerialPort(this.path, {
-                baud: 115200
+                baud: 115200,
+                parser: SerialPort.parsers.readline("\r\n")
             });
 
             this.port = port;
@@ -24,7 +25,9 @@ class RfCom {
                     console.log("Error opening", err.message);
                     return;
                 }
-                this.command("json").then(() => resolve());
+                setTimeout(() => {
+                    this.command("json").then(() => resolve());
+                }, 2000);
             });
 
             port.on('error', function(err) {
@@ -32,12 +35,8 @@ class RfCom {
             });
 
             port.on("data", (data) => {
-                this.buffer += data.toString();
-                let idx;
-                while((idx = this.buffer.indexOf("\n")) > -1) {
-                    let result = this.buffer.substr(0, idx);
-                    this.buffer = this.buffer.substr(idx + 1);
-                    this._handle(result);
+                if(data != 'RfCom 0.1') {
+                    this._handle(data);
                 }
             });
         });
