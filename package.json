@@ -1,19 +1,22 @@
 {
   "name": "homebridge-rfcom",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "RFCom control for homebridge, with Somfy and Chacon DIO support.",
-  "repository": "https://github.com/evinyatar/homebridge-rfcom",
   "main": "index.js",
   "keywords": [
-    "homebridge-plugin", "somfy", "chacon", "rfcom", "433MHz"
+    "homebridge-plugin",
+    "somfy",
+    "chacon",
+    "rfcom",
+    "433MHz"
   ],
   "engines": {
-    "homebridge": ">=0.2.0",
-    "node": ">=0.12.0"
+    "homebridge": "^0.4.45",
+    "node": "^8.0.0"
   },
   "author": "Christoph Cantillon",
   "license": "GPL",
   "dependencies": {
-    "serialport": "^4.0.6"
+    "serialport": "^7.0.2"
   }
 }

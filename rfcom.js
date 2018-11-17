@@ -1,6 +1,7 @@
 "use strict";
 
 var SerialPort = require("serialport");
+var Readline = require("@serialport/parser-readline");
 
 class RfCom {
     constructor(path) {
@@ -14,11 +15,12 @@ class RfCom {
         return new Promise((resolve, reject) => {
             var self = this;
             var port = new SerialPort(this.path, {
-                baud: 115200,
-                parser: SerialPort.parsers.readline("\r\n")
+                baud: 115200
             });
 
             this.port = port;
+
+            const parser = port.pipe(new Readline({delimiter: '\r\n'}));
 
             port.on("open", (err) => {
                 if(err) {
@@ -34,7 +36,7 @@ class RfCom {
                 console.log('Error: ', err.message);
             });
 
-            port.on("data", (data) => {
+            parser.on("data", (data) => {
                 if(data != 'RfCom 0.1') {
                     this._handle(data);
                 }
@@ -60,7 +62,7 @@ class RfCom {
     _sendNext() {
         var next = this.queue[0].cmd;
         console.log("Writing next command " + next);
-        this.port.write(next + "\n", (err) => {
+        this.port.write(next + "\r\n", (err) => {
             if(err) {
                 console.log(err);
             }
